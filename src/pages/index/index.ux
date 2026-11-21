@@ -1,0 +1,465 @@
+<import name="input-method" src="../../components/InputMethod/InputMethod.ux"></import>
+<template>
+  <div class="container">
+    <text class="time" if="{{kbHide}}">{{ time }}</text>
+    <text class="title" if="{{kbHide}}">翻译</text>
+
+    <!-- 非编辑态：整页可纵向滚动，方便看完长结果（照搬 history 页验证过的结构：flex:1 的 box + flex:1 的 scroll） -->
+    <div class="box" if="{{kbHide}}">
+      <scroll scroll-y="true" bounces="true">
+        <div class="scroll-inner">
+          <div class="padding"></div>
+          <!-- 上：语言选择 -->
+          <div class="lang-rows">
+            <div class="lang-row" @click="cycleSrc">
+              <text class="lang-text">源语言：{{ srcName }}</text>
+            </div>
+            <div class="lang-row">
+              <div class="tgt-label" @click="cycleTgt">
+                <text class="lang-label">目标：{{ tgtName }}</text>
+              </div>
+              <div class="swap-btn" @click="swapLang">
+                <text class="swap-text">互换</text>
+              </div>
+            </div>
+          </div>
+          <!-- 中：文本框（点按弹出输入法） -->
+          <div class="input-line" @click="openKb">
+            <text class="input-text" if="{{text !== ''}}">{{ dispText }}</text>
+            <text class="input-ph" if="{{text === ''}}">点此输入要翻译的文本</text>
+          </div>
+          <!-- 中：翻译按钮 -->
+          <div class="go-row">
+            <div class="go-btn" @click="doTranslate">
+              <text class="go-text">{{ translating ? "翻译中…" : "翻译" }}</text>
+            </div>
+          </div>
+          <!-- 下：翻译结果（自然高度，随页滚动） -->
+          <div class="result-wrap">
+            <text class="detected" if="{{detected !== ''}}">检测到：{{ detected }}</text>
+            <text class="result-text" if="{{result !== '' && !resultIsErr}}">{{ result }}</text>
+            <text class="result-err" if="{{result !== '' && resultIsErr}}">{{ result }}</text>
+            <text class="result-ph" if="{{result === ''}}">翻译结果将显示在这里</text>
+          </div>
+        </div>
+      </scroll>
+    </div>
+
+    <!-- 编辑态：输入行固定在顶部，键盘在底部（与 textinput 同款布局） -->
+    <div class="edit-view" if="{{!kbHide}}">
+      <div class="padding"></div>
+      <div class="input-line" @click="openKb">
+        <text class="input-text" if="{{text !== ''}}">{{ dispText }}</text>
+        <text class="input-ph" if="{{text === ''}}">点此输入要翻译的文本</text>
+      </div>
+    </div>
+
+    <input-method
+      hide="{{ kbHide }}"
+      maxlength="5"
+      vibratemode="short"
+      screentype="{{ screentype }}"
+      @delete="onDelete"
+      @complete="onComplete"
+    ></input-method>
+
+    <!-- 编辑态顶栏按钮：放最后（最上层绘制）、常驻 DOM 用 show 显隐。
+         之前用 if 动态创建的 div 按钮在键盘打开时点按无反应（疑似被后创建的滚动区/键盘层盖住），
+         改成 textinput 同款做法：img 按钮 + 60px/top 40/左 118·右 288 圆屏几何 -->
+    <img class="edit-top-btn edit-top-left" src="/common/back_rect.png" show="{{!kbHide}}" @click="closeKb" />
+    <img class="edit-top-btn edit-top-right" src="/common/check_rect.png" show="{{!kbHide}}" @click="closeKb" />
+  </div>
+</template>
+
+<script>
+import prompt from "@system.prompt"
+import { translate } from "../../common/baidu.js"
+
+// 28px 字体下单字估算宽度（px）：CJK/全角 ≈ 1em，ASCII 字母 ≈ 0.64em，数字 ≈ 0.6em，标点 ≈ 0.54em
+function charW(ch) {
+  const code = ch.charCodeAt(0)
+  if (ch === "@" || ch === "#" || ch === "%") return 30
+  if (
+    (code >= 0x2e80 && code <= 0x9fff) ||
+    (code >= 0x3000 && code <= 0x303f) ||
+    (code >= 0xff00 && code <= 0xffef)
+  ) {
+    return 30
+  }
+  if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) return 18
+  if (code >= 48 && code <= 57) return 17
+  return 15
+}
+
+const DETECT_NAMES = {
+  zh: "中文",
+  en: "英语",
+  jp: "日语",
+  kor: "韩语",
+  fra: "法语",
+  de: "德语",
+  ru: "俄语",
+  cht: "繁体中文",
+  spa: "西班牙语",
+  th: "泰语",
+  ara: "阿拉伯语",
+  pt: "葡萄牙语",
+  it: "意大利语",
+  nl: "荷兰语",
+  pl: "波兰语",
+  vie: "越南语",
+  ind: "印尼语"
+}
+
+export default {
+  private: {
+    time: "",
+    kbHide: true,
+    screentype: global.screenShape,
+    srcIdx: 0,
+    tgtIdx: 0,
+    text: "",
+    dispText: "",
+    result: "",
+    resultIsErr: false,
+    detected: "",
+    translating: false
+  },
+
+  computed: {
+    srcLangs() {
+      return [
+        { code: "auto", name: "自动检测" },
+        { code: "en", name: "英语" },
+        { code: "zh", name: "中文" }
+      ]
+    },
+    tgtLangs() {
+      return [
+        { code: "zh", name: "简体中文" },
+        { code: "cht", name: "繁体中文" },
+        { code: "en", name: "英语" },
+        { code: "jp", name: "日语" },
+        { code: "kor", name: "韩语" },
+        { code: "fra", name: "法语" },
+        { code: "de", name: "德语" },
+        { code: "ru", name: "俄语" }
+      ]
+    },
+    srcName() {
+      return this.srcLangs[this.srcIdx].name
+    },
+    tgtName() {
+      return this.tgtLangs[this.tgtIdx].name
+    },
+    srcCode() {
+      return this.srcLangs[this.srcIdx].code
+    },
+    tgtCode() {
+      return this.tgtLangs[this.tgtIdx].code
+    }
+  },
+
+  onShow() {
+    this.time = global.getTime()
+  },
+
+  // 输入框单行显示：只渲染放得下的尾部（不用 scroll，真机上 scroll 内容变化时光标会被钉死）。
+  // 直接写数据字段而不用 computed：输入来自子组件事件，直接绑定最稳。
+  updateDisp() {
+    const sw = (global.screenSize && global.screenSize.width) || 466
+    const avail = sw * 0.76 - 24 - 32
+    let out = ""
+    let w = 0
+    for (let i = this.text.length - 1; i >= 0; i--) {
+      const cw = charW(this.text.charAt(i))
+      if (w + cw > avail) break
+      w += cw
+      out = this.text.charAt(i) + out
+    }
+    this.dispText = out
+  },
+
+  cycleSrc() {
+    this.srcIdx = (this.srcIdx + 1) % this.srcLangs.length
+  },
+
+  cycleTgt() {
+    this.tgtIdx = (this.tgtIdx + 1) % this.tgtLangs.length
+  },
+
+  swapLang() {
+    if (this.srcCode === "auto") {
+      prompt.showToast({ message: "自动检测时无法互换" })
+      return
+    }
+    if (this.tgtCode !== "en" && this.tgtCode !== "zh") {
+      prompt.showToast({ message: "该目标语言无法设为源语言" })
+      return
+    }
+    const oldSrc = this.srcCode
+    const oldTgt = this.tgtCode
+    for (let i = 0; i < this.srcLangs.length; i++) {
+      if (this.srcLangs[i].code === oldTgt) this.srcIdx = i
+    }
+    for (let i = 0; i < this.tgtLangs.length; i++) {
+      if (this.tgtLangs[i].code === oldSrc) this.tgtIdx = i
+    }
+  },
+
+  openKb() {
+    this.kbHide = false
+  },
+
+  closeKb() {
+    this.kbHide = true
+  },
+
+  // 候选选中 / 英文字母上屏：统一追加到 text
+  onComplete(evt) {
+    if (!evt.detail || !evt.detail.content) return
+    const next = (this.text + evt.detail.content).slice(0, 200)
+    if (next.length === this.text.length && this.text.length >= 200) {
+      prompt.showToast({ message: "最多输入 200 字" })
+      return
+    }
+    this.text = next
+    this.updateDisp()
+  },
+
+  // 键盘 del 键：删除最后一个字符
+  onDelete() {
+    if (this.text.length <= 0) return
+    this.text = this.text.slice(0, this.text.length - 1)
+    this.updateDisp()
+  },
+
+  doTranslate() {
+    if (this.translating) return
+    if (!this.text.trim()) {
+      prompt.showToast({ message: "请先输入要翻译的文本" })
+      return
+    }
+    if (this.srcCode === this.tgtCode) {
+      prompt.showToast({ message: "源语言与目标语言相同" })
+      return
+    }
+    this.translating = true
+    this.result = ""
+    this.resultIsErr = false
+    this.detected = ""
+    const self = this
+    translate({ q: this.text, from: this.srcCode, to: this.tgtCode })
+      .then(function (res) {
+        self.translating = false
+        self.result = res.text
+        self.resultIsErr = false
+        if (self.srcCode === "auto" && res.from && DETECT_NAMES[res.from]) {
+          self.detected = DETECT_NAMES[res.from]
+        }
+      })
+      .catch(function (err) {
+        self.translating = false
+        self.result = err.message || "翻译失败"
+        self.resultIsErr = true
+      })
+  }
+}
+</script>
+
+<style>
+@import "../../common/app.css";
+
+.container {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.padding {
+  height: 92px;
+}
+
+/* 滚动区外框：flex:1 占满剩余高度（同 history 页） */
+.box {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+scroll {
+  flex: 1;
+  width: 100%;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+/* 滚动内容单根容器（同输入法候选列表的做法） */
+.scroll-inner {
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 编辑态容器：输入行固定在顶部 */
+.edit-view {
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* 上：语言选择行 */
+.lang-rows {
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.lang-row {
+  flex-direction: row;
+  align-items: center;
+  width: 76%;
+  height: 52px;
+  background-color: #262626;
+  border-radius: 100px;
+  padding: 0 20px;
+  margin-top: 8px;
+}
+
+.lang-text {
+  font-size: 26px;
+  font-weight: bold;
+  color: white;
+  lines: 1;
+}
+
+.tgt-label {
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  height: 100%;
+}
+
+.lang-label {
+  font-size: 26px;
+  font-weight: bold;
+  color: white;
+  lines: 1;
+}
+
+.swap-btn {
+  width: 76px;
+  height: 40px;
+  background-color: #0b5cd5;
+  border-radius: 100px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.swap-text {
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+}
+
+/* 中：输入框 */
+.input-line {
+  flex-direction: row;
+  align-items: center;
+  width: 76%;
+  height: 52px;
+  background-color: #262626;
+  border: 3px solid rgba(255, 255, 255, 0.06);
+  border-radius: 100px;
+  margin-top: 8px;
+  padding: 0 16px;
+}
+
+.input-text {
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+  lines: 1;
+}
+
+.input-ph {
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.4);
+  lines: 1;
+}
+
+/* 中：翻译按钮 */
+.go-row {
+  flex-direction: row;
+  justify-content: center;
+  width: 100%;
+}
+
+.go-btn {
+  width: 40%;
+  height: 52px;
+  background-color: #0b5cd5;
+  border-radius: 100px;
+  margin-top: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.go-text {
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+}
+
+/* 下：翻译结果（自然高度，随页滚动，不再固定高度/内嵌滚动） */
+.result-wrap {
+  flex-direction: column;
+  width: 76%;
+  margin-top: 8px;
+  padding-bottom: 24px;
+}
+
+.detected {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
+
+.result-text {
+  font-size: 24px;
+  color: white;
+  line-height: 34px;
+}
+
+.result-err {
+  font-size: 24px;
+  color: #ff6b6b;
+  line-height: 34px;
+}
+
+.result-ph {
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 34px;
+}
+
+/* 编辑态顶栏按钮：60px，top 40（同 textinput 圆屏几何） */
+.edit-top-btn {
+  position: absolute;
+  top: 40px;
+  width: 60px;
+  height: 60px;
+}
+
+.edit-top-left {
+  left: 118px;
+}
+
+.edit-top-right {
+  left: 288px;
+}
+</style>
