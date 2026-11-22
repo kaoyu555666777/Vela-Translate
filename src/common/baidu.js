@@ -1,11 +1,10 @@
 // 百度翻译 API 封装：@system.fetch，GET + MD5 签名
 // sign = MD5(appid + q + salt + key)，q 为原始文本（不做 URL 编码再签名）
 import fetch from "@system.fetch"
+import { loadCredentials } from "./credentials.js"
 
-// 凭据已清理：使用前请填入自己的百度翻译 APPID 和密钥
-// 注意：密钥嵌在包里即可被提取，rpk 别外发
-const APPID = ""
-const KEY = ""
+// 凭据不进源码：由手机插件经 Interconnect 推送，存在手表本地 storage 里，
+// 翻译时从 storage 读（见 ./credentials.js）
 const URL = "https://fanyi-api.baidu.com/api/trans/vip/translate"
 
 // ---- MD5（UTF-8 安全，含代理对处理）----
@@ -213,23 +212,25 @@ function safeParse(s) {
 }
 
 // 翻译。opts: {q, from, to}，返回 {from, to, text}
+// 凭据每次翻译时从 storage 读（插件推送写入后立即生效）
 export function translate(opts) {
   return new Promise(function (resolve, reject) {
-    if (!APPID || !KEY) {
-      reject(new Error("未填入百度翻译 APPID 和密钥"))
-      return
-    }
-    const q = opts.q
-    const salt = String(Math.floor(Math.random() * 32768) + 32768)
-    const sign = md5(APPID + q + salt + KEY)
-    const url =
-      URL +
-      "?q=" + encodeURIComponent(q) +
-      "&from=" + opts.from +
-      "&to=" + opts.to +
-      "&appid=" + APPID +
-      "&salt=" + salt +
-      "&sign=" + sign
+    loadCredentials(function (appid, key) {
+      if (!appid || !key) {
+        reject(new Error("未填入百度翻译 APPID 和密钥"))
+        return
+      }
+      const q = opts.q
+      const salt = String(Math.floor(Math.random() * 32768) + 32768)
+      const sign = md5(appid + q + salt + key)
+      const url =
+        URL +
+        "?q=" + encodeURIComponent(q) +
+        "&from=" + opts.from +
+        "&to=" + opts.to +
+        "&appid=" + appid +
+        "&salt=" + salt +
+        "&sign=" + sign
     fetch.fetch({
       url: url,
       method: "GET",
@@ -257,6 +258,7 @@ export function translate(opts) {
       fail: function () {
         reject(new Error("网络未连接"))
       }
+    })
     })
   })
 }

@@ -1,6 +1,7 @@
 <script>
 import device from "@system.device"
 import { loadKbType } from "./common/prefs.js"
+import { setupInterconnect } from "./common/interconnect.js"
 
 let screenSize = { width: 0, height: 0 }
 
@@ -26,6 +27,9 @@ global.kbType = "QWERTY"
 loadKbType(function (v) {
   global.kbType = v
 })
+
+// 手机插件推送凭据的接收：Interconnect，应用启动即建立连接
+setupInterconnect()
 
 export default {}
 </script>

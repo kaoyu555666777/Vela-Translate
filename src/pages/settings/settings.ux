@@ -8,7 +8,7 @@
       <scroll class="box" scroll-x="false" scroll-y="true" bounces="true">
         <div class="row" @click="goToken">
           <text class="row-label">设置令牌</text>
-          <text class="row-arrow">›</text>
+          <text class="row-value">{{ tokenText }}</text>
         </div>
         <div class="row" @click="cycleKb">
           <text class="row-label">键盘</text>
@@ -28,11 +28,15 @@
 import router from "@system.router"
 import prompt from "@system.prompt"
 import { loadKbType, saveKbType } from "../../common/prefs.js"
+import { loadCredentials, clearCredentials } from "../../common/credentials.js"
 
 export default {
   private: {
     time: "",
-    kbType: "QWERTY"
+    kbType: "QWERTY",
+    tokenText: "未设置",
+    tokenSet: false,
+    tokenClearArm: 0
   },
 
   computed: {
@@ -49,15 +53,36 @@ export default {
       self.kbType = v
       global.kbType = v
     })
+    // 令牌状态：只显示是否已设置，不显示密钥
+    loadCredentials(function (appid, key) {
+      self.tokenSet = !!(appid && key)
+      self.tokenText = self.tokenSet ? "已设置" : "未设置"
+    })
   },
 
   routeBack() {
     router.back()
   },
 
-  // 令牌设置暂未开放：先占位，不做任何操作
+  // 令牌：未设置时提示用手机插件推送；已设置时点两次清除（防误触）
   goToken() {
-    prompt.showToast({ message: "令牌设置暂未开放" })
+    if (!this.tokenSet) {
+      prompt.showToast({ message: "未设置凭据，请用手机插件推送" })
+      return
+    }
+    const now = Date.now()
+    if (!this.tokenClearArm || now - this.tokenClearArm > 5000) {
+      this.tokenClearArm = now
+      prompt.showToast({ message: "再点一次清除凭据" })
+      return
+    }
+    this.tokenClearArm = 0
+    const self = this
+    clearCredentials(function () {
+      self.tokenSet = false
+      self.tokenText = "未设置"
+      prompt.showToast({ message: "凭据已清除" })
+    })
   },
 
   cycleKb() {

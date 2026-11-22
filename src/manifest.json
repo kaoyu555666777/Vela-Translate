@@ -1,1 +1,64 @@
-{"config":{"designWidth":"device-width","logLevel":"log"},"deviceTypeList":["watch"],"features":[{"name":"system.device"},{"name":"system.router"},{"name":"system.prompt"},{"name":"system.vibrator"},{"name":"system.file"},{"name":"system.fetch"},{"name":"system.app"},{"name":"system.storage"}],"icon":"/common/logo.png","minPlatformVersion":1000,"name":"Vela Translate","package":"com.kaoyu666.translate","router":{"entry":"pages/index","pages":{"pages/index":{"component":"index"},"pages/settings":{"component":"settings"},"pages/about":{"component":"about"},"pages/buildinfo":{"component":"buildinfo"},"pages/licenses":{"component":"licenses"}}},"versionCode":9,"versionName":"1.0.8"}
+{
+  "config": {
+    "designWidth": "device-width",
+    "logLevel": "log"
+  },
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {
+      "name": "system.device"
+    },
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.prompt"
+    },
+    {
+      "name": "system.vibrator"
+    },
+    {
+      "name": "system.file"
+    },
+    {
+      "name": "system.fetch"
+    },
+    {
+      "name": "system.app"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "system.interconnect"
+    }
+  ],
+  "icon": "/common/logo.png",
+  "minPlatformVersion": 1000,
+  "name": "Vela Translate",
+  "package": "com.kaoyu666.translate",
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+      "pages/index": {
+        "component": "index"
+      },
+      "pages/settings": {
+        "component": "settings"
+      },
+      "pages/about": {
+        "component": "about"
+      },
+      "pages/buildinfo": {
+        "component": "buildinfo"
+      },
+      "pages/licenses": {
+        "component": "licenses"
+      }
+    }
+  },
+  "versionCode": 11,
+  "versionName": "1.0.10"
+}
