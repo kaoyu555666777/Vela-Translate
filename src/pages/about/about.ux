@@ -138,4 +138,42 @@ scroll {
   color: rgba(255, 255, 255, 0.6);
   lines: 1;
 }
+
+/* 手环窄屏（192/212 宽）：卡片/行宽 92%、字号缩小、顶部留白重算 */
+@media (max-width: 220) {
+  .spacer-large {
+    height: 64px;
+  }
+
+  .padding {
+    height: 48px;
+  }
+
+  .card {
+    width: 92%;
+    padding: 10px 12px;
+  }
+
+  .card-label {
+    font-size: 16px;
+  }
+
+  .card-value {
+    font-size: 20px;
+  }
+
+  .row {
+    width: 92%;
+    height: 44px;
+    padding: 0 12px;
+  }
+
+  .row-label {
+    font-size: 20px;
+  }
+
+  .row-arrow {
+    font-size: 20px;
+  }
+}
 </style>

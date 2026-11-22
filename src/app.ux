@@ -1,6 +1,5 @@
 <script>
 import device from "@system.device"
-import { loadKbType } from "./common/prefs.js"
 import { setupInterconnect } from "./common/interconnect.js"
 
 let screenSize = { width: 0, height: 0 }
@@ -22,11 +21,10 @@ global.getTime = function () {
   return hour + ":" + minute
 }
 
-// 键盘类型（全键 QWERTY / 九键 T9）：主页与设置页共享；启动时从 storage 读回上次的选择，永久保存
-global.kbType = "QWERTY"
-loadKbType(function (v) {
-  global.kbType = v
-})
+// 键盘类型：手环窄屏分支强制九键 T9。192px 宽下 26 键全键盘单键约 7px 不可用，
+// 所以启动时不从 storage 读 kbType（读了也无用），global.kbType 恒为 "T9"。
+// 设置页的键盘切换入口已删除，storage 里的旧 kbType 值被忽略。
+global.kbType = "T9"
 
 // 手机插件推送凭据的接收：Interconnect，应用启动即建立连接
 setupInterconnect()

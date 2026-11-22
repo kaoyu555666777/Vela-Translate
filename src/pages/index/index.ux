@@ -22,9 +22,6 @@
                 <text class="swap-text">互换</text>
               </div>
             </div>
-            <div class="lang-row" @click="cycleKbType">
-              <text class="lang-text">键盘：{{ kbTypeName }}</text>
-            </div>
           </div>
           <!-- 中：文本框（点按弹出输入法） -->
           <div class="input-line" @click="openKb">
@@ -56,7 +53,7 @@
 
     <!-- 编辑态：输入行固定在顶部，键盘在底部（与 textinput 同款布局） -->
     <div class="edit-view" if="{{!kbHide}}">
-      <div class="padding"></div>
+      <div class="padding edit-padding"></div>
       <div class="input-line" @click="openKb">
         <text class="input-text" if="{{text !== ''}}">{{ dispText }}</text>
         <text class="input-ph" if="{{text === ''}}">点此输入要翻译的文本</text>
@@ -75,8 +72,10 @@
 
     <!-- 编辑态顶栏按钮：放最后（最上层绘制）、常驻 DOM 用 show 显隐。
          之前用 if 动态创建的 div 按钮在键盘打开时点按无反应（疑似被后创建的滚动区/键盘层盖住），
-         改成 textinput 同款做法：img 按钮 + 60px/top 40/左 118·右 288 圆屏几何 -->
-    <img class="edit-top-btn edit-top-left" src="/common/back_rect.png" show="{{!kbHide}}" @click="closeKb" />
+         改成 textinput 同款做法：img 按钮 + 60px/top 40/左 118·右 288 圆屏几何。
+         手环窄屏分支：192/212 宽放不下左右两个 60px 按钮，只留一个 ✓ 按钮——
+         两个按钮本来都调 closeKb（关键盘回主页），去掉返回键不损失功能。
+         单按钮 48×48，top 12，水平居中（Band 9：left 72；Band 10：left 82）。 -->
     <img class="edit-top-btn edit-top-right" src="/common/check_rect.png" show="{{!kbHide}}" @click="closeKb" />
   </div>
 </template>
@@ -85,7 +84,6 @@
 import prompt from "@system.prompt"
 import router from "@system.router"
 import { translate } from "../../common/baidu.js"
-import { loadKbType, saveKbType } from "../../common/prefs.js"
 
 // 28px 字体下单字估算宽度（px）：CJK/全角 ≈ 1em，ASCII 字母 ≈ 0.64em，数字 ≈ 0.6em，标点 ≈ 0.54em
 function charW(ch) {
@@ -128,7 +126,7 @@ export default {
     time: "",
     kbHide: true,
     screentype: global.screenShape,
-    kbType: "QWERTY",
+    kbType: "T9",
     srcIdx: 0,
     tgtIdx: 0,
     text: "",
@@ -171,32 +169,27 @@ export default {
     },
     tgtCode() {
       return this.tgtLangs[this.tgtIdx].code
-    },
-    kbTypeName() {
-      return this.kbType === "T9" ? "九键" : "全键"
     }
   },
 
   onShow() {
     this.time = global.getTime()
-    // 从设置页返回时同步键盘类型；启动时从 storage 读回上次的选择
-    this.kbType = global.kbType || "QWERTY"
-    const self = this
-    loadKbType(function (v) {
-      self.kbType = v
-      global.kbType = v
-    })
+    // 手环窄屏分支：键盘恒为九键 T9，不读 storage 里的旧 kbType
+    this.kbType = "T9"
+    global.kbType = "T9"
   },
 
   // 输入框单行显示：只渲染放得下的尾部（不用 scroll，真机上 scroll 内容变化时光标会被钉死）。
   // 直接写数据字段而不用 computed：输入来自子组件事件，直接绑定最稳。
   updateDisp() {
     const sw = (global.screenSize && global.screenSize.width) || 466
-    const avail = sw * 0.76 - 24 - 32
+    // 窄屏：输入行宽 92%（圆屏 76%）；字号 28px→22px，单字估宽按 0.8 折算
+    const narrow = sw <= 220
+    const avail = sw * (narrow ? 0.92 : 0.76) - 24 - 32
     let out = ""
     let w = 0
     for (let i = this.text.length - 1; i >= 0; i--) {
-      const cw = charW(this.text.charAt(i))
+      const cw = narrow ? charW(this.text.charAt(i)) * 0.8 : charW(this.text.charAt(i))
       if (w + cw > avail) break
       w += cw
       out = this.text.charAt(i) + out
@@ -212,12 +205,6 @@ export default {
     this.tgtIdx = (this.tgtIdx + 1) % this.tgtLangs.length
   },
 
-  cycleKbType() {
-    this.kbType = this.kbType === "T9" ? "QWERTY" : "T9"
-    global.kbType = this.kbType
-    saveKbType(this.kbType)
-  },
-
   goSettings() {
     router.push({ uri: "/pages/settings" })
   },
@@ -227,7 +214,7 @@ export default {
       prompt.showToast({ message: "自动检测时无法互换" })
       return
     }
-    if (this.tgtCode !== "en" && this.tgtCode !== "zh") {
+    if (this.tgtCode !== "en" && this.tgtCode !== "zh" && this.tgtCode !== "jp") {
       prompt.showToast({ message: "该目标语言无法设为源语言" })
       return
     }
@@ -507,5 +494,144 @@ scroll {
 
 .edit-top-right {
   left: 288px;
+}
+
+/* 手环窄屏（192/212 宽）：行宽 92%、字号按比例缩小、顶部留白重算。
+   语言行最长 "目标：繁体中文"（7 字）+ 互换按钮在 92% 宽下是瓶颈，
+   所以两档宽度各给一组字号/按钮尺寸，保证放得下。 */
+@media (max-width: 220) {
+  .padding {
+    height: 48px;
+  }
+
+  /* 编辑态：✓ 按钮 top 12 + 高 48，下缘 60，输入行顶留 68 */
+  .edit-padding {
+    height: 68px;
+  }
+
+  .lang-row {
+    width: 92%;
+    height: 44px;
+    margin-top: 6px;
+  }
+
+  .input-line {
+    width: 92%;
+    height: 44px;
+    margin-top: 6px;
+    padding: 0 12px;
+  }
+
+  .input-text {
+    font-size: 22px;
+  }
+
+  .input-ph {
+    font-size: 20px;
+  }
+
+  .go-btn {
+    width: 56%;
+    height: 44px;
+  }
+
+  .settings-btn {
+    width: 56%;
+    height: 44px;
+    margin-bottom: 24px;
+  }
+
+  .go-text {
+    font-size: 22px;
+  }
+
+  .result-wrap {
+    width: 92%;
+    padding-bottom: 16px;
+  }
+
+  .detected {
+    font-size: 16px;
+  }
+
+  .result-text {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  .result-err {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  .result-ph {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  /* 编辑态单 ✓ 按钮：48×48，top 12，水平居中 */
+  .edit-top-btn {
+    top: 12px;
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* 手环 9（192 宽）：语言行 92% = 176px，内宽扣 padding 后 160px；
+   "目标：繁体中文" 7 字 ×17px=119 + 互换 36 + 间隙 ≈ 171，刚好放下 */
+@media (max-width: 200) {
+  .lang-row {
+    padding: 0 8px;
+  }
+
+  .lang-text {
+    font-size: 17px;
+  }
+
+  .lang-label {
+    font-size: 17px;
+  }
+
+  .swap-btn {
+    width: 36px;
+    height: 30px;
+  }
+
+  .swap-text {
+    font-size: 15px;
+  }
+
+  .edit-top-right {
+    left: 72px;
+  }
+}
+
+/* 手环 10（212 宽）：语言行 92% = 195px；
+   7 字 ×18px=126 + 互换 44 + padding 20 = 190，放得下 */
+@media (min-width: 201) and (max-width: 220) {
+  .lang-row {
+    padding: 0 10px;
+  }
+
+  .lang-text {
+    font-size: 18px;
+  }
+
+  .lang-label {
+    font-size: 18px;
+  }
+
+  .swap-btn {
+    width: 44px;
+    height: 32px;
+  }
+
+  .swap-text {
+    font-size: 16px;
+  }
+
+  .edit-top-right {
+    left: 82px;
+  }
 }
 </style>

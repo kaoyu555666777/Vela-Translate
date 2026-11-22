@@ -362,7 +362,7 @@ export default {
       default: "circle",
     },
     keyboardtype: {
-      default: "QWERTY",
+      default: "T9",
     },
   },
   data: {
@@ -1045,6 +1045,52 @@ export default {
     transform:scale(0.97);
     transform-origin:0 321px;
     overflow:visible;
+  }
+}
+
+/* 手环窄屏（192/212 宽）：T9 键盘整体按 宽度/480 缩放，只缩放 T9（全键本分支已禁用）。
+   480×0.40=192（手环 9），480×0.44≈211（手环 10）；transform-origin 仿照圆屏写法锚定左下角，
+   底排按键位置不变；T9 大键缩放后仍可点（缩放后单键约 94×0.40≈38px / 94×0.44≈41px）。
+   注意：#t9-keyboard 是 circle 分支的 480 坐标系键盘；手环若上报 rect，则走下面
+   rect 九键 flex 分支（按键 flex:1 自适应宽度），此处缩放不生效但无害。 */
+@media (min-width: 180) and (max-width: 200) {
+  #t9-keyboard {
+    transform:scale(0.40);
+    transform-origin:0 321px;
+    overflow:visible;
+  }
+}
+
+@media (min-width: 201) and (max-width: 220) {
+  #t9-keyboard {
+    transform:scale(0.44);
+    transform-origin:0 321px;
+    overflow:visible;
+  }
+}
+
+/* 手环窄屏 rect 九键分支：按键 flex:1 已自适应宽度，只需把固定字号/行高缩小，
+   否则 25px 字在约 50px 宽的键上会溢出；候选行与拼音行字号同步缩小 */
+@media (max-width: 220) {
+  .calbtnt9-rect {
+    font-size: 20px;
+    height: 48px;
+  }
+
+  .keyboard-rows-rect-t9 {
+    height: 48px;
+  }
+
+  .calbtn02 {
+    font-size: 24px;
+  }
+
+  .cvalrow {
+    font-size: 18px;
+  }
+
+  .caltext {
+    font-size: 22px;
   }
 }
 </style>

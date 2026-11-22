@@ -108,4 +108,28 @@ scroll {
   color: white;
   margin-top: 2px;
 }
+
+/* 手环窄屏（192/212 宽）：卡片宽 92%、字号缩小、顶部留白重算 */
+@media (max-width: 220) {
+  .spacer-large {
+    height: 64px;
+  }
+
+  .padding {
+    height: 48px;
+  }
+
+  .card {
+    width: 92%;
+    padding: 10px 12px;
+  }
+
+  .card-label {
+    font-size: 16px;
+  }
+
+  .card-value {
+    font-size: 20px;
+  }
+}
 </style>

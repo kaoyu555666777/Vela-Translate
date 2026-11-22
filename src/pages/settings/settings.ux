@@ -10,10 +10,6 @@
           <text class="row-label">设置令牌</text>
           <text class="row-value">{{ tokenText }}</text>
         </div>
-        <div class="row" @click="cycleKb">
-          <text class="row-label">键盘</text>
-          <text class="row-value">{{ kbTypeName }}</text>
-        </div>
         <div class="row" @click="goAbout">
           <text class="row-label">关于软件</text>
           <text class="row-arrow">›</text>
@@ -27,32 +23,20 @@
 <script>
 import router from "@system.router"
 import prompt from "@system.prompt"
-import { loadKbType, saveKbType } from "../../common/prefs.js"
 import { loadCredentials, clearCredentials } from "../../common/credentials.js"
 
 export default {
   private: {
     time: "",
-    kbType: "QWERTY",
     tokenText: "未设置",
     tokenSet: false,
     tokenClearArm: 0
   },
 
-  computed: {
-    kbTypeName() {
-      return this.kbType === "T9" ? "9键" : "26键"
-    }
-  },
-
   onShow() {
     this.time = global.getTime()
-    this.kbType = global.kbType || "QWERTY"
-    const self = this
-    loadKbType(function (v) {
-      self.kbType = v
-      global.kbType = v
-    })
+    // 手环窄屏分支：键盘恒为九键 T9，本页无键盘切换入口；storage 里的旧 kbType 被忽略
+    global.kbType = "T9"
     // 令牌状态：只显示是否已设置，不显示密钥
     loadCredentials(function (appid, key) {
       self.tokenSet = !!(appid && key)
@@ -83,12 +67,6 @@ export default {
       self.tokenText = "未设置"
       prompt.showToast({ message: "凭据已清除" })
     })
-  },
-
-  cycleKb() {
-    this.kbType = this.kbType === "T9" ? "QWERTY" : "T9"
-    global.kbType = this.kbType
-    saveKbType(this.kbType)
   },
 
   goAbout() {
@@ -159,5 +137,34 @@ scroll {
   font-weight: bold;
   color: rgba(255, 255, 255, 0.6);
   lines: 1;
+}
+
+/* 手环窄屏（192/212 宽）：行宽 92%、字号缩小、顶部留白重算 */
+@media (max-width: 220) {
+  .spacer-large {
+    height: 64px;
+  }
+
+  .padding {
+    height: 48px;
+  }
+
+  .row {
+    width: 92%;
+    height: 44px;
+    padding: 0 12px;
+  }
+
+  .row-label {
+    font-size: 20px;
+  }
+
+  .row-value {
+    font-size: 20px;
+  }
+
+  .row-arrow {
+    font-size: 20px;
+  }
 }
 </style>

@@ -143,3 +143,54 @@
   font-size: 32px;
   font-style: normal;
 }
+
+/* 手环窄屏（192/212 宽，矩形）：标题/时间/顶栏按钮按窄宽重算。
+   注意引擎铁律：right 不生效，右侧按钮一律换算成 left
+   （40px 按钮、右留 8px：Band 9 left 144 = 192-8-40；Band 10 left 164 = 212-8-40）。
+   本块放文件最后，覆盖上面 (shape: rect) 与 (device-type: watch) 的圆屏/方屏值。 */
+@media (max-width: 220) {
+  .time {
+    top: 4px;
+    font-size: 18px;
+  }
+
+  .title {
+    top: 24px;
+    font-size: 22px;
+  }
+
+  .top {
+    top: 8px;
+  }
+
+  .bottom {
+    bottom: 8px;
+  }
+
+  .leftButton {
+    left: 8px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .rightButton {
+    width: 40px;
+    height: 40px;
+  }
+
+  .iconfont {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 200) {
+  .rightButton {
+    left: 144px;
+  }
+}
+
+@media (min-width: 201) and (max-width: 220) {
+  .rightButton {
+    left: 164px;
+  }
+}
