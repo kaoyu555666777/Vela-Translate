@@ -1,0 +1,141 @@
+<template>
+  <div class="container">
+    <text class="time">{{ time }}</text>
+    <text class="title">关于软件</text>
+    <img class="top leftButton" src="/common/back_rect.png" @click="routeBack" />
+    <text class="bold spacer-large"></text>
+    <div class="box">
+      <scroll class="box" scroll-x="false" scroll-y="true" bounces="true">
+        <div class="card">
+          <text class="card-label">应用名称</text>
+          <text class="card-value">Vela Translate</text>
+        </div>
+        <div class="card">
+          <text class="card-label">版本号</text>
+          <text class="card-value">{{ ver }}</text>
+        </div>
+        <div class="card">
+          <text class="card-label">作者</text>
+          <text class="card-value">烤于的烤鱼</text>
+        </div>
+        <div class="row" @click="goBuildInfo">
+          <text class="row-label">编译信息</text>
+          <text class="row-arrow">›</text>
+        </div>
+        <div class="row" @click="goLicenses">
+          <text class="row-label">开放源代码许可</text>
+          <text class="row-arrow">›</text>
+        </div>
+        <div class="padding"></div>
+      </scroll>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from "@system.router"
+import app from "@system.app"
+
+export default {
+  private: {
+    ver: app.getInfo().versionName,
+    time: ""
+  },
+
+  onShow() {
+    this.time = global.getTime()
+  },
+
+  routeBack() {
+    router.back()
+  },
+
+  goBuildInfo() {
+    router.push({ uri: "/pages/buildinfo" })
+  },
+
+  goLicenses() {
+    router.push({ uri: "/pages/licenses" })
+  }
+}
+</script>
+
+<style>
+@import "../../common/app.css";
+
+.container {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.spacer-large {
+  height: 140px;
+}
+
+.padding {
+  height: 92px;
+}
+
+.box {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+
+scroll {
+  flex: 1;
+  width: 100%;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.card {
+  flex-direction: column;
+  width: 76%;
+  background-color: #262626;
+  border-radius: 20px;
+  padding: 12px 20px;
+  margin-top: 8px;
+}
+
+.card-label {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.card-value {
+  font-size: 26px;
+  font-weight: bold;
+  color: white;
+  margin-top: 2px;
+}
+
+.row {
+  flex-direction: row;
+  align-items: center;
+  width: 76%;
+  height: 52px;
+  background-color: #262626;
+  border-radius: 100px;
+  padding: 0 20px;
+  margin-top: 8px;
+}
+
+.row-label {
+  flex: 1;
+  font-size: 26px;
+  font-weight: bold;
+  color: white;
+  lines: 1;
+}
+
+.row-arrow {
+  font-size: 26px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.6);
+  lines: 1;
+}
+</style>

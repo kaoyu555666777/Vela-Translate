@@ -9,8 +9,8 @@
   },
   "scripts": {
     "start": "aiot start --watch --enable-custom-component",
-    "build": "aiot build --enable-custom-component",
-    "release": "aiot release --enable-custom-component --enable-jsc",
+    "build": "node scripts/gen-buildinfo.js && aiot build --enable-custom-component",
+    "release": "node scripts/gen-buildinfo.js && aiot release --enable-custom-component --enable-jsc",
     "lint": "eslint --format codeframe --fix --ext .ux,.js src/"
   },
   "lint-staged": {

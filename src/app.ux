@@ -1,5 +1,6 @@
 <script>
 import device from "@system.device"
+import { loadKbType } from "./common/prefs.js"
 
 let screenSize = { width: 0, height: 0 }
 
@@ -19,6 +20,12 @@ global.getTime = function () {
   const minute = date.getMinutes().toString().padStart(2, "0")
   return hour + ":" + minute
 }
+
+// 键盘类型（全键 QWERTY / 九键 T9）：主页与设置页共享；启动时从 storage 读回上次的选择，永久保存
+global.kbType = "QWERTY"
+loadKbType(function (v) {
+  global.kbType = v
+})
 
 export default {}
 </script>

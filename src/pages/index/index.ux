@@ -2,7 +2,7 @@
 <template>
   <div class="container">
     <text class="time" if="{{kbHide}}">{{ time }}</text>
-    <text class="title" if="{{kbHide}}">翻译</text>
+    <text class="title" if="{{kbHide}}">Vela Translate</text>
 
     <!-- 非编辑态：整页可纵向滚动，方便看完长结果（照搬 history 页验证过的结构：flex:1 的 box + flex:1 的 scroll） -->
     <div class="box" if="{{kbHide}}">
@@ -21,6 +21,9 @@
               <div class="swap-btn" @click="swapLang">
                 <text class="swap-text">互换</text>
               </div>
+            </div>
+            <div class="lang-row" @click="cycleKbType">
+              <text class="lang-text">键盘：{{ kbTypeName }}</text>
             </div>
           </div>
           <!-- 中：文本框（点按弹出输入法） -->
@@ -41,6 +44,12 @@
             <text class="result-err" if="{{result !== '' && resultIsErr}}">{{ result }}</text>
             <text class="result-ph" if="{{result === ''}}">翻译结果将显示在这里</text>
           </div>
+          <!-- 最下：设置按钮 -->
+          <div class="go-row">
+            <div class="settings-btn" @click="goSettings">
+              <text class="go-text">设置</text>
+            </div>
+          </div>
         </div>
       </scroll>
     </div>
@@ -59,6 +68,7 @@
       maxlength="5"
       vibratemode="short"
       screentype="{{ screentype }}"
+      keyboardtype="{{ kbType }}"
       @delete="onDelete"
       @complete="onComplete"
     ></input-method>
@@ -73,7 +83,9 @@
 
 <script>
 import prompt from "@system.prompt"
+import router from "@system.router"
 import { translate } from "../../common/baidu.js"
+import { loadKbType, saveKbType } from "../../common/prefs.js"
 
 // 28px 字体下单字估算宽度（px）：CJK/全角 ≈ 1em，ASCII 字母 ≈ 0.64em，数字 ≈ 0.6em，标点 ≈ 0.54em
 function charW(ch) {
@@ -116,6 +128,7 @@ export default {
     time: "",
     kbHide: true,
     screentype: global.screenShape,
+    kbType: "QWERTY",
     srcIdx: 0,
     tgtIdx: 0,
     text: "",
@@ -131,7 +144,8 @@ export default {
       return [
         { code: "auto", name: "自动检测" },
         { code: "en", name: "英语" },
-        { code: "zh", name: "中文" }
+        { code: "zh", name: "中文" },
+        { code: "jp", name: "日语" }
       ]
     },
     tgtLangs() {
@@ -157,11 +171,21 @@ export default {
     },
     tgtCode() {
       return this.tgtLangs[this.tgtIdx].code
+    },
+    kbTypeName() {
+      return this.kbType === "T9" ? "九键" : "全键"
     }
   },
 
   onShow() {
     this.time = global.getTime()
+    // 从设置页返回时同步键盘类型；启动时从 storage 读回上次的选择
+    this.kbType = global.kbType || "QWERTY"
+    const self = this
+    loadKbType(function (v) {
+      self.kbType = v
+      global.kbType = v
+    })
   },
 
   // 输入框单行显示：只渲染放得下的尾部（不用 scroll，真机上 scroll 内容变化时光标会被钉死）。
@@ -186,6 +210,16 @@ export default {
 
   cycleTgt() {
     this.tgtIdx = (this.tgtIdx + 1) % this.tgtLangs.length
+  },
+
+  cycleKbType() {
+    this.kbType = this.kbType === "T9" ? "QWERTY" : "T9"
+    global.kbType = this.kbType
+    saveKbType(this.kbType)
+  },
+
+  goSettings() {
+    router.push({ uri: "/pages/settings" })
   },
 
   swapLang() {
@@ -413,6 +447,18 @@ scroll {
   font-size: 28px;
   font-weight: bold;
   color: white;
+}
+
+/* 最下：设置按钮（灰色，与蓝色翻译按钮区分） */
+.settings-btn {
+  width: 40%;
+  height: 52px;
+  background-color: #262626;
+  border-radius: 100px;
+  margin-top: 8px;
+  margin-bottom: 32px;
+  justify-content: center;
+  align-items: center;
 }
 
 /* 下：翻译结果（自然高度，随页滚动，不再固定高度/内嵌滚动） */

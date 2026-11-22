@@ -1,4 +1,4 @@
-# 翻译（Vela-Translate）
+# Vela Translate
 
 小米手表（Watch S3/S4 圆屏 466×466）上的翻译应用，用百度翻译 API。
 

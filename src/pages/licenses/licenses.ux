@@ -1,0 +1,139 @@
+<template>
+  <div class="container">
+    <text class="time">{{ time }}</text>
+    <text class="title">开源许可</text>
+    <img class="top leftButton" src="/common/back_rect.png" @click="routeBack" />
+    <text class="bold spacer-large"></text>
+    <div class="box">
+      <scroll class="box" scroll-x="false" scroll-y="true" bounces="true">
+        <div class="card">
+          <text class="card-label">组件</text>
+          <text class="card-value">输入法（InputMethod）</text>
+        </div>
+        <div class="card">
+          <text class="card-label">来源</text>
+          <text class="card-value">NEORUAA/Vela_input_method</text>
+        </div>
+        <div class="card">
+          <text class="card-label">许可证</text>
+          <text class="card-value">MIT License</text>
+        </div>
+        <div class="card">
+          <text class="card-label">版权</text>
+          <text class="card-value">Copyright (c) 2024 NEORUAA</text>
+        </div>
+        <div class="license-card">
+          <text class="license-text">MIT License
+
+Copyright (c) 2024 NEORUAA
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</text>
+        </div>
+        <div class="padding"></div>
+      </scroll>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from "@system.router"
+
+export default {
+  private: {
+    time: ""
+  },
+
+  onShow() {
+    this.time = global.getTime()
+  },
+
+  routeBack() {
+    router.back()
+  }
+}
+</script>
+
+<style>
+@import "../../common/app.css";
+
+.container {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.spacer-large {
+  height: 140px;
+}
+
+.padding {
+  height: 92px;
+}
+
+.box {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+
+scroll {
+  flex: 1;
+  width: 100%;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.card {
+  flex-direction: column;
+  width: 76%;
+  background-color: #262626;
+  border-radius: 20px;
+  padding: 12px 20px;
+  margin-top: 8px;
+}
+
+.card-label {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.card-value {
+  font-size: 26px;
+  font-weight: bold;
+  color: white;
+  margin-top: 2px;
+}
+
+.license-card {
+  flex-direction: column;
+  width: 88%;
+  background-color: #262626;
+  border-radius: 20px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.license-text {
+  font-size: 20px;
+  line-height: 28px;
+  color: rgba(255, 255, 255, 0.7);
+}
+</style>
