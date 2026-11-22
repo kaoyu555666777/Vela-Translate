@@ -133,6 +133,23 @@
   }
 }
 
+/* 圆屏 480×480（Xiaomi Watch S5 46mm，1.48" 圆屏；个别来源写 466，
+   用 475–485 宽度区间命中 480、同时不碰 466 的值）：
+   右侧顶栏按钮 left 316 = 480-92-72；底部居中按钮 left 204 = 480/2-36。 */
+@media (device-type: watch) and (min-width: 475) and (max-width: 485) and (shape: circle) {
+  .rightButton {
+    left: 316px;
+  }
+
+  .bottom.leftButton {
+    left: 204px;
+  }
+
+  .bottom.rightButton {
+    left: 204px;
+  }
+}
+
 @font-face {
   font-family: "iconfont";
   src: url("iconfont.ttf") format("truetype");

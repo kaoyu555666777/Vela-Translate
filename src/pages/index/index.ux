@@ -22,9 +22,6 @@
                 <text class="swap-text">互换</text>
               </div>
             </div>
-            <div class="lang-row" @click="cycleKbType">
-              <text class="lang-text">键盘：{{ kbTypeName }}</text>
-            </div>
           </div>
           <!-- 中：文本框（点按弹出输入法） -->
           <div class="input-line" @click="openKb">
@@ -85,7 +82,7 @@
 import prompt from "@system.prompt"
 import router from "@system.router"
 import { translate } from "../../common/baidu.js"
-import { loadKbType, saveKbType } from "../../common/prefs.js"
+import { loadKbType } from "../../common/prefs.js"
 
 // 28px 字体下单字估算宽度（px）：CJK/全角 ≈ 1em，ASCII 字母 ≈ 0.64em，数字 ≈ 0.6em，标点 ≈ 0.54em
 function charW(ch) {
@@ -171,9 +168,6 @@ export default {
     },
     tgtCode() {
       return this.tgtLangs[this.tgtIdx].code
-    },
-    kbTypeName() {
-      return this.kbType === "T9" ? "九键" : "全键"
     }
   },
 
@@ -212,12 +206,6 @@ export default {
     this.tgtIdx = (this.tgtIdx + 1) % this.tgtLangs.length
   },
 
-  cycleKbType() {
-    this.kbType = this.kbType === "T9" ? "QWERTY" : "T9"
-    global.kbType = this.kbType
-    saveKbType(this.kbType)
-  },
-
   goSettings() {
     router.push({ uri: "/pages/settings" })
   },
@@ -227,7 +215,7 @@ export default {
       prompt.showToast({ message: "自动检测时无法互换" })
       return
     }
-    if (this.tgtCode !== "en" && this.tgtCode !== "zh") {
+    if (this.tgtCode !== "en" && this.tgtCode !== "zh" && this.tgtCode !== "jp") {
       prompt.showToast({ message: "该目标语言无法设为源语言" })
       return
     }
@@ -507,5 +495,17 @@ scroll {
 
 .edit-top-right {
   left: 288px;
+}
+
+/* 圆屏 480×480（Xiaomi Watch S5 46mm）：编辑态顶栏按钮按 480 中心 240 换算，
+   左 125 / 右 295（466 下为 118 / 288，中心 233，不动）。 */
+@media (min-width: 475) and (max-width: 485) and (shape: circle) {
+  .edit-top-left {
+    left: 125px;
+  }
+
+  .edit-top-right {
+    left: 295px;
+  }
 }
 </style>
