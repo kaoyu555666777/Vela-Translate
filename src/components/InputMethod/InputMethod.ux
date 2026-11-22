@@ -1047,4 +1047,21 @@ export default {
     overflow:visible;
   }
 }
+
+/* 方屏 432×514（Redmi Watch 5 / 6）：designWidth=device-width，视口宽即 432。
+   矩形键盘按 480 坐标系设计，全键盘与九宫格统一等比缩放 0.9（480×0.9=432）贴合屏宽，
+   transform-origin 锚定左下角，底排按键位置不变（仿照上方圆屏 0.97 写法） */
+@media (min-width: 425) and (max-width: 440) and (shape: rect) {
+  #full-keyboard {
+    transform:scale(0.9);
+    transform-origin:0 321px;
+    overflow:visible;
+  }
+
+  #t9-keyboard {
+    transform:scale(0.9);
+    transform-origin:0 321px;
+    overflow:visible;
+  }
+}
 </style>

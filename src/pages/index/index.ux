@@ -22,9 +22,6 @@
                 <text class="swap-text">互换</text>
               </div>
             </div>
-            <div class="lang-row" @click="cycleKbType">
-              <text class="lang-text">键盘：{{ kbTypeName }}</text>
-            </div>
           </div>
           <!-- 中：文本框（点按弹出输入法） -->
           <div class="input-line" @click="openKb">
@@ -85,7 +82,7 @@
 import prompt from "@system.prompt"
 import router from "@system.router"
 import { translate } from "../../common/baidu.js"
-import { loadKbType, saveKbType } from "../../common/prefs.js"
+import { loadKbType } from "../../common/prefs.js"
 
 // 28px 字体下单字估算宽度（px）：CJK/全角 ≈ 1em，ASCII 字母 ≈ 0.64em，数字 ≈ 0.6em，标点 ≈ 0.54em
 function charW(ch) {
@@ -171,9 +168,6 @@ export default {
     },
     tgtCode() {
       return this.tgtLangs[this.tgtIdx].code
-    },
-    kbTypeName() {
-      return this.kbType === "T9" ? "九键" : "全键"
     }
   },
 
@@ -212,12 +206,6 @@ export default {
     this.tgtIdx = (this.tgtIdx + 1) % this.tgtLangs.length
   },
 
-  cycleKbType() {
-    this.kbType = this.kbType === "T9" ? "QWERTY" : "T9"
-    global.kbType = this.kbType
-    saveKbType(this.kbType)
-  },
-
   goSettings() {
     router.push({ uri: "/pages/settings" })
   },
@@ -227,7 +215,7 @@ export default {
       prompt.showToast({ message: "自动检测时无法互换" })
       return
     }
-    if (this.tgtCode !== "en" && this.tgtCode !== "zh") {
+    if (this.tgtCode !== "en" && this.tgtCode !== "zh" && this.tgtCode !== "jp") {
       prompt.showToast({ message: "该目标语言无法设为源语言" })
       return
     }
@@ -507,5 +495,36 @@ scroll {
 
 .edit-top-right {
   left: 288px;
+}
+
+/* 方屏 432×514（Redmi Watch 5 / 6）：顶边没有弧形，时钟/标题可上移——
+   time top 20→8，title top 48→36（标题下沿约 68px），.padding 92→76px；
+   编辑态按钮 top 40→24（下沿 84，与 76px 处的输入行重叠 8px，与圆屏一致），
+   左右按钮按 432 中心 216 对称换算：101/271（圆屏 118/288 是按 466 中心 233 算的）。
+   注意：right 定位在引擎下不生效，右侧位置一律用 left。 */
+@media (device-type: watch) and (shape: rect) {
+  .time {
+    top: 8px;
+  }
+
+  .title {
+    top: 36px;
+  }
+
+  .padding {
+    height: 76px;
+  }
+
+  .edit-top-btn {
+    top: 24px;
+  }
+
+  .edit-top-left {
+    left: 101px;
+  }
+
+  .edit-top-right {
+    left: 271px;
+  }
 }
 </style>
