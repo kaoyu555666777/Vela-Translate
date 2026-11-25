@@ -22,14 +22,12 @@
                 <text class="swap-text">互换</text>
               </div>
             </div>
-            <div class="lang-row" @click="cycleKbType">
-              <text class="lang-text">键盘：{{ kbTypeName }}</text>
-            </div>
           </div>
-          <!-- 中：文本框（点按弹出输入法） -->
+          <!-- 中：文本框（点按弹出输入法），右侧 × 清空 -->
           <div class="input-line" @click="openKb">
             <text class="input-text" if="{{text !== ''}}">{{ dispText }}</text>
             <text class="input-ph" if="{{text === ''}}">点此输入要翻译的文本</text>
+            <text class="clear-btn" if="{{text !== ''}}" @click="clearText">×</text>
           </div>
           <!-- 中：翻译按钮 -->
           <div class="go-row">
@@ -60,18 +58,23 @@
       <div class="input-line" @click="openKb">
         <text class="input-text" if="{{text !== ''}}">{{ dispText }}</text>
         <text class="input-ph" if="{{text === ''}}">点此输入要翻译的文本</text>
+        <text class="clear-btn" if="{{text !== ''}}" @click="clearText">×</text>
       </div>
     </div>
 
-    <input-method
-      hide="{{ kbHide }}"
-      maxlength="5"
-      vibratemode="short"
-      screentype="{{ screentype }}"
-      keyboardtype="{{ kbType }}"
-      @delete="onDelete"
-      @complete="onComplete"
-    ></input-method>
+    <!-- 输入法组件：kbReady 切换可整体重建。改 keyboardtype prop 不会让已建好的键盘子树
+         换分支（设置页改完键盘类型、回主页打开键盘仍是旧类型），类型变了必须重建 -->
+    <div if="{{kbReady}}">
+      <input-method
+        hide="{{ kbHide }}"
+        maxlength="5"
+        vibratemode="short"
+        screentype="{{ screentype }}"
+        keyboardtype="{{ kbType }}"
+        @delete="onDelete"
+        @complete="onComplete"
+      ></input-method>
+    </div>
 
     <!-- 编辑态顶栏按钮：放最后（最上层绘制）、常驻 DOM 用 show 显隐。
          之前用 if 动态创建的 div 按钮在键盘打开时点按无反应（疑似被后创建的滚动区/键盘层盖住），
@@ -85,7 +88,12 @@
 import prompt from "@system.prompt"
 import router from "@system.router"
 import { translate } from "../../common/baidu.js"
-import { loadKbType, saveKbType } from "../../common/prefs.js"
+import { loadKbType } from "../../common/prefs.js"
+
+// 上次已应用到输入法组件的键盘类型（null = 组件还没建过）；openKb 时比对，变了就重建组件
+let appliedKbType = null
+// 点 × 清空时，事件冒泡会顺带触发父级 input-line 的 openKb；置旗挡下这一次，150ms 后自动失效
+let suppressOpenKb = false
 
 // 28px 字体下单字估算宽度（px）：CJK/全角 ≈ 1em，ASCII 字母 ≈ 0.64em，数字 ≈ 0.6em，标点 ≈ 0.54em
 function charW(ch) {
@@ -127,6 +135,7 @@ export default {
   private: {
     time: "",
     kbHide: true,
+    kbReady: true,
     screentype: global.screenShape,
     kbType: "QWERTY",
     srcIdx: 0,
@@ -171,9 +180,6 @@ export default {
     },
     tgtCode() {
       return this.tgtLangs[this.tgtIdx].code
-    },
-    kbTypeName() {
-      return this.kbType === "T9" ? "九键" : "全键"
     }
   },
 
@@ -192,7 +198,8 @@ export default {
   // 直接写数据字段而不用 computed：输入来自子组件事件，直接绑定最稳。
   updateDisp() {
     const sw = (global.screenSize && global.screenSize.width) || 466
-    const avail = sw * 0.76 - 24 - 32
+    // 有文本时右侧 × 占 48px（40px 按钮 + 8px 间距），显示宽度相应扣掉
+    const avail = sw * 0.76 - 24 - 32 - (this.text === "" ? 0 : 48)
     let out = ""
     let w = 0
     for (let i = this.text.length - 1; i >= 0; i--) {
@@ -212,12 +219,6 @@ export default {
     this.tgtIdx = (this.tgtIdx + 1) % this.tgtLangs.length
   },
 
-  cycleKbType() {
-    this.kbType = this.kbType === "T9" ? "QWERTY" : "T9"
-    global.kbType = this.kbType
-    saveKbType(this.kbType)
-  },
-
   goSettings() {
     router.push({ uri: "/pages/settings" })
   },
@@ -227,7 +228,7 @@ export default {
       prompt.showToast({ message: "自动检测时无法互换" })
       return
     }
-    if (this.tgtCode !== "en" && this.tgtCode !== "zh") {
+    if (this.tgtCode !== "en" && this.tgtCode !== "zh" && this.tgtCode !== "jp") {
       prompt.showToast({ message: "该目标语言无法设为源语言" })
       return
     }
@@ -242,7 +243,38 @@ export default {
   },
 
   openKb() {
-    this.kbHide = false
+    if (suppressOpenKb) {
+      suppressOpenKb = false
+      return
+    }
+    const self = this
+    // 打开前再同步一次键盘类型（onShow 在从设置页返回时不一定触发，不能只靠它）
+    loadKbType(function (v) {
+      self.kbType = v
+      global.kbType = v
+      if (appliedKbType !== null && v !== appliedKbType) {
+        // 类型变了：重建输入法组件再打开键盘（只改 prop 不会让已建好的键盘子树换分支）
+        appliedKbType = v
+        self.kbReady = false
+        setTimeout(function () {
+          self.kbReady = true
+          if (!suppressOpenKb) self.kbHide = false
+        }, 50)
+      } else {
+        appliedKbType = v
+        self.kbHide = false
+      }
+    })
+  },
+
+  // 输入框右侧 ×：清空已输入文本（不碰翻译结果），不弹键盘
+  clearText() {
+    this.text = ""
+    this.dispText = ""
+    suppressOpenKb = true
+    setTimeout(function () {
+      suppressOpenKb = false
+    }, 150)
   },
 
   closeKb() {
@@ -414,10 +446,25 @@ scroll {
 }
 
 .input-text {
+  flex: 1;
   font-size: 28px;
   font-weight: bold;
   color: white;
   lines: 1;
+}
+
+/* 输入框右侧 × 清空按钮：原生 text，不占图片资源 */
+.clear-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 100px;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-size: 30px;
+  line-height: 40px;
+  text-align: center;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .input-ph {

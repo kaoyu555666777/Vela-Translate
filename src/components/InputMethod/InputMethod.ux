@@ -518,10 +518,15 @@ export default {
         this.resetResultList();
         break;
       case "lang":
-        // 语言循环：中文 -> 英文 -> 日语 -> 中文
-        if (this.lang === "cn") this.lang = "en";
-        else if (this.lang === "en") this.lang = "jp";
-        else this.lang = "cn";
+        // T9 下不支持日语输入（罗马音拼写走九键待选字母，假名候选不可靠）：九键只在中文/英文间循环
+        if (this.keyboardtype === "T9") {
+          this.lang = this.lang === "cn" ? "en" : "cn";
+        } else {
+          // 语言循环：中文 -> 英文 -> 日语 -> 中文
+          if (this.lang === "cn") this.lang = "en";
+          else if (this.lang === "en") this.lang = "jp";
+          else this.lang = "cn";
+        }
         this.cval = "";
         this.downFlag = "";
         this.clearWaiting();
