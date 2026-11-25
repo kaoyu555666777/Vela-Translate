@@ -31,8 +31,12 @@ export function setupInterconnect() {
     const appid = String(msg.appid || "").trim()
     const key = String(msg.key || "").trim()
     if (!appid || !key) return
-    saveCredentials(appid, key, function () {
-      prompt.showToast({ message: "已收到百度翻译凭据" })
+    saveCredentials(appid, key, function (ok) {
+      if (ok) {
+        prompt.showToast({ message: "已收到百度翻译凭据" })
+      } else {
+        prompt.showToast({ message: "凭据保存失败，请重试" })
+      }
     })
   }
   conn.onopen = function () {}

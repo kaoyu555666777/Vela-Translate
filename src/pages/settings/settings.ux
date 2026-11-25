@@ -99,10 +99,14 @@ export default {
     }
     this.tokenClearArm = 0
     const self = this
-    clearCredentials(function () {
-      self.tokenSet = false
-      self.tokenText = "未设置"
-      prompt.showToast({ message: "凭据已清除" })
+    clearCredentials(function (ok) {
+      if (ok) {
+        self.tokenSet = false
+        self.tokenText = "未设置"
+        prompt.showToast({ message: "凭据已清除" })
+      } else {
+        prompt.showToast({ message: "凭据清除失败，请重试" })
+      }
     })
   },
 
