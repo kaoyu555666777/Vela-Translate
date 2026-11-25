@@ -30,6 +30,9 @@ import prompt from "@system.prompt"
 import { loadKbType, saveKbType } from "../../common/prefs.js"
 import { loadCredentials, clearCredentials } from "../../common/credentials.js"
 
+// 设置页停留时刷新令牌状态的定时器（推送到达后不用退出重进就能看到 已设置）；离页清除
+let tokenTimer = null
+
 export default {
   private: {
     time: "",
@@ -53,7 +56,24 @@ export default {
       self.kbType = v
       global.kbType = v
     })
-    // 令牌状态：只显示是否已设置，不显示密钥
+    this.refreshToken()
+    // 在设置页停留时每秒刷新一次令牌状态：手机推送到达后不用退出重进就能看到 已设置
+    if (tokenTimer) clearInterval(tokenTimer)
+    tokenTimer = setInterval(function () {
+      self.refreshToken()
+    }, 1000)
+  },
+
+  onHide() {
+    if (tokenTimer) {
+      clearInterval(tokenTimer)
+      tokenTimer = null
+    }
+  },
+
+  // 令牌状态：只显示是否已设置，不显示密钥
+  refreshToken() {
+    const self = this
     loadCredentials(function (appid, key) {
       self.tokenSet = !!(appid && key)
       self.tokenText = self.tokenSet ? "已设置" : "未设置"
@@ -64,8 +84,9 @@ export default {
     router.back()
   },
 
-  // 令牌：未设置时提示用手机插件推送；已设置时点两次清除（防误触）
+  // 令牌：点之前先刷新一次状态（推送可能刚到），再按最新状态处理
   goToken() {
+    this.refreshToken()
     if (!this.tokenSet) {
       prompt.showToast({ message: "未设置凭据，请用手机插件推送" })
       return

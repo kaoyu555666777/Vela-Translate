@@ -62,19 +62,16 @@
       </div>
     </div>
 
-    <!-- 输入法组件：kbReady 切换可整体重建。改 keyboardtype prop 不会让已建好的键盘子树
-         换分支（设置页改完键盘类型、回主页打开键盘仍是旧类型），类型变了必须重建 -->
-    <div if="{{kbReady}}">
-      <input-method
-        hide="{{ kbHide }}"
-        maxlength="5"
-        vibratemode="short"
-        screentype="{{ screentype }}"
-        keyboardtype="{{ kbType }}"
-        @delete="onDelete"
-        @complete="onComplete"
-      ></input-method>
-    </div>
+    <!-- 输入法组件：1.0.12 曾包一层 if 重建组件来换键盘类型，结果键盘打不开，已回退为常驻 -->
+    <input-method
+      hide="{{ kbHide }}"
+      maxlength="5"
+      vibratemode="short"
+      screentype="{{ screentype }}"
+      keyboardtype="{{ kbType }}"
+      @delete="onDelete"
+      @complete="onComplete"
+    ></input-method>
 
     <!-- 编辑态顶栏按钮：放最后（最上层绘制）、常驻 DOM 用 show 显隐。
          之前用 if 动态创建的 div 按钮在键盘打开时点按无反应（疑似被后创建的滚动区/键盘层盖住），
@@ -88,10 +85,8 @@
 import prompt from "@system.prompt"
 import router from "@system.router"
 import { translate } from "../../common/baidu.js"
-import { loadKbType } from "../../common/prefs.js"
+import { loadKbType, getKbTypeSync } from "../../common/prefs.js"
 
-// 上次已应用到输入法组件的键盘类型（null = 组件还没建过）；openKb 时比对，变了就重建组件
-let appliedKbType = null
 // 点 × 清空时，事件冒泡会顺带触发父级 input-line 的 openKb；置旗挡下这一次，150ms 后自动失效
 let suppressOpenKb = false
 
@@ -135,7 +130,6 @@ export default {
   private: {
     time: "",
     kbHide: true,
-    kbReady: true,
     screentype: global.screenShape,
     kbType: "QWERTY",
     srcIdx: 0,
@@ -247,24 +241,11 @@ export default {
       suppressOpenKb = false
       return
     }
-    const self = this
-    // 打开前再同步一次键盘类型（onShow 在从设置页返回时不一定触发，不能只靠它）
-    loadKbType(function (v) {
-      self.kbType = v
-      global.kbType = v
-      if (appliedKbType !== null && v !== appliedKbType) {
-        // 类型变了：重建输入法组件再打开键盘（只改 prop 不会让已建好的键盘子树换分支）
-        appliedKbType = v
-        self.kbReady = false
-        setTimeout(function () {
-          self.kbReady = true
-          if (!suppressOpenKb) self.kbHide = false
-        }, 50)
-      } else {
-        appliedKbType = v
-        self.kbHide = false
-      }
-    })
+    // 打开前同步一次键盘类型（onShow 在从设置页返回时不一定触发，不能只靠它）；
+    // 同步读缓存直接打开，不等回调、不重建组件——1.0.12 的回调+重建会让键盘打不开
+    this.kbType = getKbTypeSync()
+    global.kbType = this.kbType
+    this.kbHide = false
   },
 
   // 输入框右侧 ×：清空已输入文本（不碰翻译结果），不弹键盘

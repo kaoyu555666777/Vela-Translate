@@ -36,3 +36,10 @@ export function saveKbType(value) {
     complete: function () {}
   })
 }
+
+// 同步读当前键盘类型（内存缓存；启动时 loadKbType、切换时 saveKbType 都会更新它）。
+// 打开键盘时用它同步取值，不等 storage 回调——1.0.12 曾在 openKb 里等回调并重建组件，
+// 结果键盘打不开（重建不可靠），已回退为同步打开。
+export function getKbTypeSync() {
+  return cached
+}
